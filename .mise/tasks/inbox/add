@@ -6,8 +6,8 @@
 
 set -e
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-INBOX_DIR="$REPO_ROOT/00_Inbox"
+ZETTEL_ROOT="${ZETTEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+INBOX_DIR="$ZETTEL_ROOT/00_Inbox"
 ASSETS_DIR="$INBOX_DIR/assets"
 
 # Ensure directories exist

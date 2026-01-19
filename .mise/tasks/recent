@@ -4,7 +4,7 @@
 
 set -e
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
+ZETTEL_ROOT="${ZETTEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 DAYS="${usage_days:-7}"
 
 echo ""
@@ -12,7 +12,7 @@ echo "Recent Activity (last $DAYS days)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-cd "$REPO_ROOT"
+cd "$ZETTEL_ROOT"
 
 # Get commits from the period, check full message for Co-Authored-By
 claude_hashes=""

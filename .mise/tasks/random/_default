@@ -4,8 +4,8 @@
 
 set -e
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+ZETTEL_ROOT="${ZETTEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+NOTES_DIR="$ZETTEL_ROOT/10_Zettelkasten"
 
 # Get random note
 note=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" | shuf -n 1)

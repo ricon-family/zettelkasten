@@ -4,9 +4,9 @@
 
 set -e
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
-INBOX_DIR="$REPO_ROOT/00_Inbox"
+ZETTEL_ROOT="${ZETTEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+NOTES_DIR="$ZETTEL_ROOT/10_Zettelkasten"
+INBOX_DIR="$ZETTEL_ROOT/00_Inbox"
 
 echo ""
 echo "Zettelkasten Stats"
