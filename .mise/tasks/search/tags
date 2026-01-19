@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#MISE description="Find notes by tag"
+#USAGE arg "<tag>" help="Tag to search for"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+if [ -z "$1" ]; then
+  echo "Usage: search:tags <tag>"
+  echo ""
+  echo "Available tags:"
+  find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec grep -h "^tags:" {} \; 2>/dev/null | \
+    sed 's/tags://; s/\[//g; s/\]//g; s/,/\n/g' | \
+    tr -d ' "'"'" | grep -v '^$' | sort | uniq -c | sort -rn | \
+    while read -r count tag; do
+      printf "  %3d  %s\n" "$count" "$tag"
+    done
+  exit 0
+fi
+
+tag="$1"
+
+echo ""
+echo "Notes tagged: $tag"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+found=0
+while IFS= read -r -d '' file; do
+  if grep -q "^tags:.*$tag" "$file" 2>/dev/null; then
+    filename=$(basename "$file" .md)
+    echo "- [[$filename]]"
+    found=$((found + 1))
+  fi
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0)
+
+echo ""
+if [ "$found" -eq 0 ]; then
+  echo "No notes found with tag: $tag"
+fi

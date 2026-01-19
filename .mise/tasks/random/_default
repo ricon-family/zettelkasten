@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#MISE description="Get a random note from the zettelkasten"
+#MISE alias="random"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+# Get random note
+note=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" | shuf -n 1)
+
+if [ -z "$note" ]; then
+  echo "No notes found in $NOTES_DIR"
+  exit 1
+fi
+
+echo "$note"

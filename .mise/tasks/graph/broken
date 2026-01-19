@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#MISE description="Find broken wikilinks as exploration opportunities"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+echo ""
+echo "Broken Links (Ideas Worth Exploring)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Build list of existing note titles (without .md)
+existing_notes=$(mktemp)
+find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec basename {} .md \; > "$existing_notes"
+
+# Extract all wikilinks, pair with source file
+all_links=$(mktemp)
+while IFS= read -r -d '' file; do
+  filename=$(basename "$file" .md)
+  grep -o '\[\[[^]]*\]\]' "$file" 2>/dev/null | sed 's/\[\[//g; s/\]\]//g' | while read -r link; do
+    echo "$link|$filename"
+  done
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0) > "$all_links"
+
+# Find broken links (targets that don't exist), count and show sources
+broken=$(mktemp)
+while IFS='|' read -r link source; do
+  if ! grep -qxF "$link" "$existing_notes"; then
+    echo "$link|$source"
+  fi
+done < "$all_links" > "$broken"
+
+if [ ! -s "$broken" ]; then
+  echo "No broken links found. All wikilinks resolve to existing notes."
+else
+  # Count occurrences of each broken link and collect sources
+  cut -d'|' -f1 "$broken" | sort | uniq -c | sort -rn | while read -r count link; do
+    sources=$(grep "^$link|" "$broken" | cut -d'|' -f2 | sort -u | tr '\n' ', ' | sed 's/, $//')
+    printf "%2d refs: [[%s]]\n" "$count" "$link"
+    echo "         ← $sources"
+  done
+
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "These are ideas you've referenced but not yet written."
+  echo "Higher count = more worth developing."
+fi
+
+rm -f "$existing_notes" "$all_links" "$broken"
+echo ""

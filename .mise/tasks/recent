@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#MISE description="Show recent zettelkasten activity"
+#USAGE flag "-d --days <days>" help="Days to look back (default: 7)"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+DAYS="${usage_days:-7}"
+
+echo ""
+echo "Recent Activity (last $DAYS days)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+cd "$REPO_ROOT"
+
+# Get commits from the period, check full message for Co-Authored-By
+claude_hashes=""
+solo_hashes=""
+
+while read -r hash; do
+  [ -z "$hash" ] && continue
+  full_msg=$(git log -1 --format="%B" "$hash" 2>/dev/null)
+  if echo "$full_msg" | grep -qi "co-authored-by.*claude"; then
+    claude_hashes="$claude_hashes $hash"
+  else
+    solo_hashes="$solo_hashes $hash"
+  fi
+done < <(git log --since="$DAYS days ago" --pretty=format:"%H" -- "10_Zettelkasten/" "00_Inbox/" 2>/dev/null)
+
+if [ -z "$claude_hashes" ] && [ -z "$solo_hashes" ]; then
+  echo "No changes in the last $DAYS days."
+  echo ""
+  exit 0
+fi
+
+# Helper to display commits
+show_commits() {
+  local hashes="$1"
+  for hash in $hashes; do
+    subject=$(git log -1 --format="%s" "$hash")
+    date=$(git log -1 --format="%ai" "$hash" | cut -d' ' -f1)
+    files=$(git diff-tree --no-commit-id --name-only -r "$hash" 2>/dev/null | grep "10_Zettelkasten/\|00_Inbox/" | head -5)
+    echo "  $date: $subject"
+    if [ -n "$files" ]; then
+      echo "$files" | while read -r f; do
+        note=$(basename "$f" .md)
+        echo "    → [[$note]]"
+      done
+    fi
+  done
+}
+
+# Get notes added/modified in Claude sessions
+if [ -n "$claude_hashes" ]; then
+  echo "With Claude:"
+  show_commits "$claude_hashes"
+  echo ""
+fi
+
+# Get notes added/modified solo
+if [ -n "$solo_hashes" ]; then
+  echo "Solo (outside Claude sessions):"
+  show_commits "$solo_hashes"
+  echo ""
+fi
+
+# Summary stats
+claude_count=$(echo $claude_hashes | wc -w | tr -d ' ')
+solo_count=$(echo $solo_hashes | wc -w | tr -d ' ')
+total_commits=$((claude_count + solo_count))
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Summary: $total_commits commits ($claude_count with Claude, $solo_count solo)"
+echo ""

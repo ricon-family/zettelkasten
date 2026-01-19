@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+#MISE description="Zettelkasten health dashboard"
+#MISE alias="stats"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+INBOX_DIR="$REPO_ROOT/00_Inbox"
+
+echo ""
+echo "Zettelkasten Stats"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Note count
+note_count=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" | wc -l | tr -d ' ')
+echo "Notes:           $note_count"
+
+# Inbox count
+inbox_count=$(find "$INBOX_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+echo "Inbox:           $inbox_count pending"
+
+# Total words (rough)
+total_words=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec cat {} \; | wc -w | tr -d ' ')
+avg_words=$((total_words / note_count))
+echo "Total words:     $total_words (~$avg_words/note)"
+
+echo ""
+echo "Graph Health"
+echo "────────────────────────────────────────────────────────────"
+
+# Link density
+existing_notes=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec basename {} .md \;)
+total_links=0
+notes_with_zero=0
+
+while IFS= read -r -d '' file; do
+  link_count=$(grep -o '\[\[[^]]*\]\]' "$file" 2>/dev/null | sort -u | wc -l | tr -d ' ')
+  total_links=$((total_links + link_count))
+  if [ "$link_count" -eq 0 ]; then
+    notes_with_zero=$((notes_with_zero + 1))
+  fi
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0)
+
+avg_links=$(echo "scale=1; $total_links / $note_count" | bc)
+connectivity=$(echo "scale=0; 100 * ($note_count - $notes_with_zero) / $note_count" | bc)
+
+echo "Total links:     $total_links"
+echo "Avg links/note:  $avg_links"
+echo "Connectivity:    ${connectivity}% (notes with ≥1 link)"
+
+# Orphans (no incoming links)
+all_link_targets=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec grep -oh '\[\[[^]]*\]\]' {} \; 2>/dev/null | sed 's/\[\[//g; s/\]\]//g' | sort -u)
+orphan_count=0
+while IFS= read -r -d '' file; do
+  filename=$(basename "$file" .md)
+  if ! echo "$all_link_targets" | grep -qxF "$filename"; then
+    orphan_count=$((orphan_count + 1))
+  fi
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0)
+echo "Orphans:         $orphan_count (no incoming links)"
+
+# Broken links (unique targets that don't exist)
+broken_targets=$(mktemp)
+while IFS= read -r -d '' file; do
+  grep -o '\[\[[^]]*\]\]' "$file" 2>/dev/null | sed 's/\[\[//g; s/\]\]//g'
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0) | sort -u | while read -r link; do
+  if ! echo "$existing_notes" | grep -qxF "$link"; then
+    echo "$link"
+  fi
+done > "$broken_targets"
+broken_count=$(wc -l < "$broken_targets" | tr -d ' ')
+rm -f "$broken_targets"
+echo "Broken links:    $broken_count (ideas to explore)"
+
+echo ""
+echo "Tags"
+echo "────────────────────────────────────────────────────────────"
+
+# Tag distribution (top 10)
+find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec grep -h "^tags:" {} \; 2>/dev/null | \
+  sed 's/tags://; s/\[//g; s/\]//g; s/,/\n/g' | \
+  tr -d ' "'"'" | grep -v '^$' | sort | uniq -c | sort -rn | head -10 | \
+  while read -r count tag; do
+    printf "  %3d  %s\n" "$count" "$tag"
+  done
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Health summary
+echo ""
+if [ "$connectivity" -ge 95 ] && [ "$orphan_count" -le 3 ]; then
+  echo "Health: Excellent"
+elif [ "$connectivity" -ge 80 ] && [ "$orphan_count" -le 5 ]; then
+  echo "Health: Good"
+else
+  echo "Health: Needs attention"
+  [ "$connectivity" -lt 80 ] && echo "  → Improve connectivity (target: 95%+)"
+  [ "$orphan_count" -gt 5 ] && echo "  → Connect orphan notes"
+fi
+echo ""

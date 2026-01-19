@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#MISE description="Get a random note not touched in N days"
+#USAGE flag "-d --days <days>" help="Days since last modified (default: 30)"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+DAYS="${usage_days:-30}"
+
+echo ""
+echo "Random Stale Note (not touched in $DAYS+ days)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Find notes not modified in N days
+stale_notes=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -mtime +"$DAYS" 2>/dev/null)
+
+if [ -z "$stale_notes" ]; then
+  echo "No notes older than $DAYS days."
+  echo "All notes have been touched recently!"
+  echo ""
+  exit 0
+fi
+
+# Pick random one
+note=$(echo "$stale_notes" | shuf -n 1)
+filename=$(basename "$note" .md)
+
+# Get last modified date
+last_modified=$(stat -f "%Sm" -t "%Y-%m-%d" "$note" 2>/dev/null || stat -c "%y" "$note" 2>/dev/null | cut -d' ' -f1)
+
+echo "Note: [[$filename]]"
+echo "Last modified: $last_modified"
+echo ""
+echo "────────────────────────────────────────────────────────────"
+# Show first few lines of content
+sed -n '/^## /,/^## /p' "$note" | head -10 | tail -n +1
+echo ""
+echo "────────────────────────────────────────────────────────────"
+echo "File: $note"
+echo ""

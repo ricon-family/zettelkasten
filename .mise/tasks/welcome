@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+#MISE description="Welcome and status overview for the zettelkasten"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+INBOX_DIR="$REPO_ROOT/00_Inbox"
+
+echo ""
+echo "Zettelkasten"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "An external memory maintained through conversations with Claude."
+echo "Each session starts fresh, but your zettelkasten persists."
+echo ""
+
+# Quick stats
+note_count=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+inbox_count=$(find "$INBOX_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+# Link metrics
+total_links=0
+notes_with_links=0
+while IFS= read -r -d '' file; do
+  links=$(grep -o '\[\[[^]]*\]\]' "$file" 2>/dev/null | sort -u | wc -l | tr -d ' ')
+  total_links=$((total_links + links))
+  [ "$links" -gt 0 ] && notes_with_links=$((notes_with_links + 1))
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0 2>/dev/null)
+
+if [ "$note_count" -gt 0 ]; then
+  avg_links=$(echo "scale=1; $total_links / $note_count" | bc)
+  connectivity=$(echo "scale=0; 100 * $notes_with_links / $note_count" | bc)
+else
+  avg_links="0"
+  connectivity="0"
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Status"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Notes:        $note_count"
+echo "  Inbox:        $inbox_count pending"
+echo "  Links:        $total_links ($avg_links/note)"
+echo "  Connectivity: ${connectivity}%"
+echo ""
+
+# Health indicator
+if [ "$connectivity" -ge 95 ]; then
+  echo "  Health:       ✓ Excellent"
+elif [ "$connectivity" -ge 80 ]; then
+  echo "  Health:       ✓ Good"
+elif [ "$note_count" -eq 0 ]; then
+  echo "  Health:       ○ Empty (start adding notes!)"
+else
+  echo "  Health:       △ Needs attention"
+fi
+echo ""
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Commands"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Dashboard:"
+echo "    zettel stats                Health overview"
+echo "    zettel recent               Recent activity"
+echo ""
+echo "  Search:"
+echo "    zettel search <query>       Full-text search"
+echo "    zettel search:tags <tag>    Find by tag"
+echo "    zettel search:links <note>  Show connections"
+echo ""
+echo "  Discover:"
+echo "    zettel random               Random note"
+echo "    zettel random:stale         Neglected note"
+echo "    zettel review               Guided connection review"
+echo ""
+echo "  Capture:"
+echo "    zettel inbox:add <text>     Quick capture"
+echo "    zettel inbox:add -f <file>  Add audio/image"
+echo "    zettel inbox:status         Pending items"
+echo ""
+echo "  Graph:"
+echo "    zettel graph:density        Link analysis"
+echo "    zettel graph:orphans        Unlinked notes"
+echo "    zettel graph:broken         Missing links"
+echo ""
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Next Steps"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Contextual suggestions
+if [ "$note_count" -eq 0 ]; then
+  echo "  You're just getting started! Try:"
+  echo "    - Add your first note: zettel inbox:add \"A thought\""
+  echo "    - Read CLAUDE.md for how this works"
+elif [ "$inbox_count" -gt 0 ]; then
+  echo "  You have $inbox_count item(s) in your inbox to process."
+  echo "    - Run: zettel inbox:status"
+elif [ "$connectivity" -lt 80 ]; then
+  echo "  Your graph could use more connections."
+  echo "    - Run: zettel graph:orphans"
+  echo "    - Run: zettel review"
+else
+  echo "  Your zettelkasten is healthy! Consider:"
+  echo "    - Run: zettel random:stale (revisit old notes)"
+  echo "    - Run: zettel graph:broken (explore new ideas)"
+fi
+echo ""

@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#MISE description="Find notes linking to/from a note"
+#USAGE arg "<note>" help="Note name (without .md)"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+if [ -z "$1" ]; then
+  echo "Usage: search:links <note>"
+  exit 1
+fi
+
+note="$*"
+
+echo ""
+echo "Links for: [[$note]]"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Check if note exists
+if [ ! -f "$NOTES_DIR/$note.md" ]; then
+  echo ""
+  echo "Note not found: $note"
+  echo ""
+  exit 1
+fi
+
+# Outgoing links (what this note links to)
+echo ""
+echo "Links to (outgoing):"
+outgoing=$(grep -o '\[\[[^]]*\]\]' "$NOTES_DIR/$note.md" 2>/dev/null | sed 's/\[\[//g; s/\]\]//g' | sort -u)
+if [ -n "$outgoing" ]; then
+  echo "$outgoing" | while read -r link; do
+    if [ -f "$NOTES_DIR/$link.md" ]; then
+      echo "  → [[$link]]"
+    else
+      echo "  → [[$link]] (broken)"
+    fi
+  done
+else
+  echo "  (none)"
+fi
+
+# Incoming links (what links to this note)
+echo ""
+echo "Linked from (incoming):"
+incoming_count=0
+while IFS= read -r -d '' file; do
+  filename=$(basename "$file" .md)
+  [ "$filename" = "$note" ] && continue
+  if grep -q "\[\[$note\]\]" "$file" 2>/dev/null; then
+    echo "  ← [[$filename]]"
+    incoming_count=$((incoming_count + 1))
+  fi
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0)
+
+if [ "$incoming_count" -eq 0 ]; then
+  echo "  (none - this is an orphan)"
+fi
+echo ""

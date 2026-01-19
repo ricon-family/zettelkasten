@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#MISE description="Surface a random note for connection review"
+#MISE depends=["random"]
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo ""
+echo "Smart Random Note Review"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Get random note
+note=$(mise run random)
+filename=$(basename "$note" .md)
+
+echo "Note: $filename"
+echo ""
+
+# Count current links
+link_count=$(grep -o '\[\[[^]]*\]\]' "$note" 2>/dev/null | sort -u | wc -l | tr -d ' ')
+echo "Current links: $link_count"
+echo ""
+
+# Show existing links
+links=$(grep -o '\[\[[^]]*\]\]' "$note" 2>/dev/null | sort -u | sed 's/\[\[//g; s/\]\]//g')
+if [ -n "$links" ]; then
+  echo "Linked to:"
+  echo "$links" | while read -r link; do
+    echo "  - $link"
+  done
+  echo ""
+fi
+
+# Show the idea section if it exists
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Content preview:"
+echo ""
+# Get content between first ## and second ##, or first 15 lines
+sed -n '/^## /,/^## /p' "$note" | head -15 | tail -n +1
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Review prompts:"
+echo "  - What other notes relate to this idea?"
+echo "  - Is this still accurate/relevant?"
+echo "  - Could this link to any recent additions?"
+echo ""
+echo "File: $note"
+echo ""

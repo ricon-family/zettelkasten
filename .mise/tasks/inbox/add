@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+#MISE description="Add an item to the inbox (text, audio, or image)"
+#USAGE flag "-t --type <type>" help="Type: text, audio, image (auto-detected if file provided)"
+#USAGE flag "-f --file <file>" help="Path to audio/image file"
+#USAGE arg "[content]" help="Text content (or omit to read from stdin)"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+INBOX_DIR="$REPO_ROOT/00_Inbox"
+ASSETS_DIR="$INBOX_DIR/assets"
+
+# Ensure directories exist
+mkdir -p "$INBOX_DIR" "$ASSETS_DIR"
+
+# Generate timestamp for filename
+timestamp=$(date +"%Y%m%d-%H%M%S")
+
+# Determine content type and source
+if [ -n "$usage_file" ]; then
+  # File provided - detect type from extension
+  ext="${usage_file##*.}"
+  case "$ext" in
+    mp3|m4a|wav|ogg|webm|aac)
+      type="audio"
+      ;;
+    png|jpg|jpeg|gif|webp|heic)
+      type="image"
+      ;;
+    *)
+      type="${usage_type:-text}"
+      ;;
+  esac
+
+  # Copy file to assets
+  filename=$(basename "$usage_file")
+  asset_name="${timestamp}-${filename}"
+  cp "$usage_file" "$ASSETS_DIR/$asset_name"
+
+  # Create inbox note referencing the asset
+  note_file="$INBOX_DIR/${timestamp}-${type}-capture.md"
+
+  cat > "$note_file" << EOF
+---
+type: ${type}-capture
+captured: $(date -Iseconds)
+status: unprocessed
+---
+
+# ${type^} Capture - $timestamp
+
+![[assets/${asset_name}]]
+
+## Notes
+
+(Add context or transcription here)
+EOF
+
+  echo "Added $type to inbox: $note_file"
+  echo "Asset stored: $ASSETS_DIR/$asset_name"
+
+elif [ -n "$usage_content" ] || [ -n "$1" ]; then
+  # Text content provided as argument
+  content="${usage_content:-$*}"
+  note_file="$INBOX_DIR/${timestamp}-quick-capture.md"
+
+  cat > "$note_file" << EOF
+---
+type: quick-capture
+captured: $(date -Iseconds)
+status: unprocessed
+---
+
+# Quick Capture - $timestamp
+
+$content
+EOF
+
+  echo "Added to inbox: $note_file"
+
+elif [ ! -t 0 ]; then
+  # Read from stdin (piped input)
+  content=$(cat)
+  note_file="$INBOX_DIR/${timestamp}-quick-capture.md"
+
+  cat > "$note_file" << EOF
+---
+type: quick-capture
+captured: $(date -Iseconds)
+status: unprocessed
+---
+
+# Quick Capture - $timestamp
+
+$content
+EOF
+
+  echo "Added to inbox: $note_file"
+
+else
+  echo "Usage: inbox:add [text content]"
+  echo "       inbox:add -f /path/to/audio.mp3"
+  echo "       inbox:add -f /path/to/image.png"
+  echo "       echo 'content' | inbox:add"
+  exit 1
+fi

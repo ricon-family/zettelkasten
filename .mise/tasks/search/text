@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#MISE description="Full-text search across zettelkasten"
+#MISE alias="search"
+#USAGE arg "<query>" help="Search term or regex"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+if [ -z "$1" ]; then
+  echo "Usage: search <query>"
+  exit 1
+fi
+
+query="$*"
+
+echo ""
+echo "Search: \"$query\""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Search with context
+results=$(grep -ril "$query" "$NOTES_DIR"/*.md 2>/dev/null || true)
+
+if [ -z "$results" ]; then
+  echo "No matches found."
+  echo ""
+  exit 0
+fi
+
+count=$(echo "$results" | wc -l | tr -d ' ')
+echo "Found $count note(s):"
+echo ""
+
+echo "$results" | while read -r file; do
+  filename=$(basename "$file" .md)
+  echo "── [[$filename]] ──"
+  # Show matching lines with context
+  grep -in "$query" "$file" 2>/dev/null | head -3 | while read -r line; do
+    echo "  $line"
+  done
+  echo ""
+done

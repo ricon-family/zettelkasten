@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#MISE description="Analyze link density across zettelkasten notes"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+echo ""
+echo "Link Density Analysis"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+total_notes=0
+total_links=0
+notes_with_zero=0
+
+while IFS= read -r -d '' file; do
+  filename=$(basename "$file" .md)
+  link_count=$(grep -o '\[\[[^]]*\]\]' "$file" 2>/dev/null | sort -u | wc -l | tr -d ' ')
+
+  total_notes=$((total_notes + 1))
+  total_links=$((total_links + link_count))
+
+  if [ "$link_count" -eq 0 ]; then
+    notes_with_zero=$((notes_with_zero + 1))
+  fi
+
+  printf "%2d links: %s\n" "$link_count" "$filename"
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0 | sort -z)
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [ "$total_notes" -gt 0 ]; then
+  avg=$(echo "scale=1; $total_links / $total_notes" | bc)
+  connectivity=$(echo "scale=0; 100 * ($total_notes - $notes_with_zero) / $total_notes" | bc)
+
+  echo "Total notes:          $total_notes"
+  echo "Total links:          $total_links"
+  echo "Average links/note:   $avg"
+  echo "Notes with 0 links:   $notes_with_zero"
+  echo "Connectivity:         ${connectivity}%"
+  echo ""
+
+  if [ "$connectivity" -lt 95 ]; then
+    echo "Target: 95%+ connectivity, 3-5 links per note"
+  else
+    echo "Excellent connectivity!"
+  fi
+fi
+echo ""

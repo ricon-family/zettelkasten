@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Output shell configuration for global zettel command (use with eval)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Pass caller's PWD so tasks can know where zettel was invoked from
+echo "alias zettel='ZETTEL_CALLER_PWD=\"\$PWD\" mise -C \"$REPO_DIR\" run'"

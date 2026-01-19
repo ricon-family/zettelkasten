@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#MISE description="Show inbox status"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+INBOX_DIR="$REPO_ROOT/00_Inbox"
+
+# Count items (excluding assets folder and hidden files)
+count=$(find "$INBOX_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+if [ "$count" -eq 0 ]; then
+  echo "Inbox: empty"
+else
+  echo "Inbox: $count item(s) pending"
+  echo ""
+  find "$INBOX_DIR" -maxdepth 1 -name "*.md" -exec basename {} .md \; | sort | while read -r item; do
+    echo "  - $item"
+  done
+fi

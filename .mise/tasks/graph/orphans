@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#MISE description="Find notes with no incoming links (orphans)"
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTES_DIR="$REPO_ROOT/10_Zettelkasten"
+
+# Files to exclude from orphan detection
+EXCLUDE_PATTERN="^(index|CLAUDE|README)$"
+
+echo ""
+echo "Orphan Notes (No Incoming Links)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Build list of all wikilink targets across all notes
+all_links=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec grep -oh '\[\[[^]]*\]\]' {} \; 2>/dev/null | sed 's/\[\[//g; s/\]\]//g' | sort -u)
+
+orphan_count=0
+
+while IFS= read -r -d '' file; do
+  filename=$(basename "$file" .md)
+
+  # Skip excluded files
+  if echo "$filename" | grep -qE "$EXCLUDE_PATTERN"; then
+    continue
+  fi
+
+  # Check if any note links to this one
+  if ! echo "$all_links" | grep -qxF "$filename"; then
+    echo "- [[$filename]]"
+    orphan_count=$((orphan_count + 1))
+  fi
+done < <(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -print0 | sort -z)
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [ "$orphan_count" -eq 0 ]; then
+  echo "No orphans. All notes have at least one incoming link."
+else
+  echo "Found $orphan_count orphan note(s)."
+  echo ""
+  echo "These notes exist but nothing links to them."
+  echo "Consider: adding links, archiving, or accepting as standalone."
+fi
+echo ""
