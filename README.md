@@ -27,10 +27,22 @@ eval "$(mise -C ~/zettelkasten-tooling run -q shell)"
 
 Reload your shell, then run `zettel welcome` to verify.
 
+## Quick Start
+
+Create a new zettelkasten:
+
+```shell
+zettel init ~/my-zettelkasten
+export ZETTEL_ROOT="$HOME/my-zettelkasten"
+```
+
+This creates the directory structure, index.md, and CLAUDE.md for AI assistant integration.
+
 ## Commands
 
 | Command | Description |
 |---------|-------------|
+| `zettel init [path]` | Bootstrap a new zettelkasten |
 | `zettel welcome` | Overview and current status |
 | `zettel search:text <query>` | Full-text search |
 | `zettel graph:stats` | Health dashboard |
