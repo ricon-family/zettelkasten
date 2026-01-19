@@ -7,6 +7,23 @@ ZETTEL_ROOT="${ZETTEL_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 NOTES_DIR="$ZETTEL_ROOT/10_Zettelkasten"
 INBOX_DIR="$ZETTEL_ROOT/00_Inbox"
 
+# Check if zettelkasten structure exists
+if [ ! -d "$NOTES_DIR" ] || [ ! -d "$INBOX_DIR" ]; then
+  echo ""
+  echo "Zettelkasten"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "  No zettelkasten found at: $ZETTEL_ROOT"
+  echo ""
+  echo "  To create one:"
+  echo "    zettel init ~/path/to/zettelkasten"
+  echo "    export ZETTEL_ROOT=\"\$HOME/path/to/zettelkasten\""
+  echo ""
+  echo "  Or set ZETTEL_ROOT to an existing zettelkasten."
+  echo ""
+  exit 0
+fi
+
 echo ""
 echo "Zettelkasten"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
