@@ -14,12 +14,36 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Note count
-note_count=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" | wc -l | tr -d ' ')
+note_count=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 echo "Notes:           $note_count"
 
 # Inbox count
 inbox_count=$(find "$INBOX_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 echo "Inbox:           $inbox_count pending"
+
+# Handle empty zettelkasten
+if [ "$note_count" -eq 0 ]; then
+  echo "Total words:     0"
+  echo ""
+  echo "Graph Health"
+  echo "────────────────────────────────────────────────────────────"
+  echo "Total links:     0"
+  echo "Avg links/note:  0"
+  echo "Connectivity:    0%"
+  echo "Orphans:         0"
+  echo "Broken links:    0"
+  echo ""
+  echo "Tags"
+  echo "────────────────────────────────────────────────────────────"
+  echo "  (none)"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Health: Empty"
+  echo "  → Add your first note to get started!"
+  echo ""
+  exit 0
+fi
 
 # Total words (rough)
 total_words=$(find "$NOTES_DIR" -maxdepth 1 -name "*.md" -exec cat {} \; | wc -w | tr -d ' ')
