@@ -1,20 +1,55 @@
 # Zettelkasten Tooling
 
-## Development
+Mise tasks for managing a zettelkasten with Obsidian. Search, analyze, capture, and maintain your knowledge base from the command line.
 
-This project uses [shimmer](https://github.com/ricon-family/shimmer) for agent workflows.
+## Features
 
-To set up shimmer:
+- **Full-text search** across all notes
+- **Health dashboard** with stats and broken link detection
+- **Quick capture** to inbox without leaving terminal
+- **Random note** surfacing for review
+- **Graph analysis** for orphans and connections
 
-1. Clone shimmer to your workspace:
-   ```bash
-   git clone https://github.com/ricon-family/shimmer.git ~/shimmer
-   cd ~/shimmer && mise trust && mise install
-   ```
+## Requirements
 
-2. Add to your shell config (`~/.zshrc` or `~/.bashrc`):
-   ```bash
-   eval "$(mise -C ~/shimmer run -q shell)"
-   ```
+- macOS or Linux
+- [Mise](https://mise.jdx.dev/)
+- A zettelkasten following the standard structure
 
-3. Reload your shell and run `shimmer welcome` to verify.
+## Installation
+
+Clone this repo and add to your shell config (`~/.zshrc` or `~/.bashrc`):
+
+```shell
+git clone https://github.com/ricon-family/zettelkasten.git ~/zettelkasten-tooling
+eval "$(mise -C ~/zettelkasten-tooling run -q shell)"
+```
+
+Reload your shell, then run `zettel welcome` to verify.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `zettel welcome` | Overview and current status |
+| `zettel search:text <query>` | Full-text search |
+| `zettel graph:stats` | Health dashboard |
+| `zettel random` | Random note for review |
+| `zettel inbox:add <text>` | Quick capture to inbox |
+
+Run `zettel` to see all available commands.
+
+## Structure
+
+This tooling expects a zettelkasten with:
+
+```
+zettelkasten/
+├── 00_Inbox/          # Raw captures, unprocessed
+├── 10_Zettelkasten/   # Permanent atomic notes
+└── 99_Archive/        # Source material
+```
+
+## See Also
+
+- [shimmer](https://github.com/ricon-family/shimmer) - Agent workflow infrastructure
