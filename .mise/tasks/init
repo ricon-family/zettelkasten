@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+#MISE description="Initialize a new zettelkasten with standard structure"
+#USAGE arg "[path]" help="Directory to create zettelkasten in (default: current directory)"
+
+set -e
+
+TARGET_DIR="${usage_path:-$(pwd)}"
+
+# Resolve to absolute path
+TARGET_DIR="$(cd "$(dirname "$TARGET_DIR")" 2>/dev/null && pwd)/$(basename "$TARGET_DIR")" || TARGET_DIR="$(pwd)/$TARGET_DIR"
+
+# Check if already initialized
+if [ -d "$TARGET_DIR/10_Zettelkasten" ] && [ -d "$TARGET_DIR/00_Inbox" ]; then
+  echo "Zettelkasten already exists at $TARGET_DIR"
+  exit 1
+fi
+
+echo ""
+echo "Initializing zettelkasten at: $TARGET_DIR"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Create directory structure
+mkdir -p "$TARGET_DIR/00_Inbox"
+mkdir -p "$TARGET_DIR/10_Zettelkasten"
+mkdir -p "$TARGET_DIR/99_Archive"
+
+echo "  ✓ Created 00_Inbox/"
+echo "  ✓ Created 10_Zettelkasten/"
+echo "  ✓ Created 99_Archive/"
+
+# Create index.md
+cat > "$TARGET_DIR/index.md" << 'EOF'
+# Zettelkasten Index
+
+An external memory maintained through conversations with Claude.
+
+## Entry Points
+
+### Ideas & Projects
+
+- (Your notes will appear here as you add them)
+
+### By Status
+
+- `active` - Current work
+- `idea` - Early stage concepts
+- `to-build` - Ideas to implement
+
+## Structure
+
+- `00_Inbox/` - Quick captures (should be empty or near-empty)
+- `10_Zettelkasten/` - Permanent atomic notes
+- `99_Archive/` - Source material
+
+## See Also
+
+- [[CLAUDE]] - Instructions for maintaining this zettelkasten
+EOF
+
+echo "  ✓ Created index.md"
+
+# Create CLAUDE.md
+cat > "$TARGET_DIR/CLAUDE.md" << 'EOF'
+# Zettelkasten - Start Here
+
+You're maintaining this zettelkasten for the user. You start each session fresh with no memory. This file gets you oriented.
+
+## Your Role
+
+The user interacts with this zettelkasten through conversations with you. Your job is to:
+
+1. **Capture** - Store information the user shares (facts, thoughts, research, conversations)
+2. **Process** - Transform raw input into atomic notes with links
+3. **Retrieve** - Answer questions by searching and synthesizing from the notes
+4. **Connect** - Find and surface relationships between ideas
+
+## First Steps Each Session
+
+1. Read this file
+2. Check `index.md` for overview of what's here
+3. Ask the user what they'd like to do (add info, explore ideas, etc.)
+
+## Structure
+
+```
+zettelkasten/
+├── CLAUDE.md          # This file - your orientation
+├── index.md           # Overview and entry points
+├── 00_Inbox/          # Raw captures, unprocessed
+├── 10_Zettelkasten/   # Permanent atomic notes (one idea each)
+└── 99_Archive/        # Source material (chat transcripts, articles)
+```
+
+## Workflows
+
+### When the user shares information
+
+1. If it's a quick thought → capture in `00_Inbox/` for later processing
+2. If it's a clear atomic idea → create note directly in `10_Zettelkasten/`
+3. If it's source material (transcript, article) → store in `99_Archive/`
+4. Always look for links to existing notes
+
+### Processing the Inbox
+
+When distilling inbox items into atomic notes:
+
+1. Create the atomic note in `10_Zettelkasten/`
+2. Then decide what to do with the source:
+   - **Archive** if source has value beyond what was extracted (context, quotes, details)
+   - **Delete** if the idea was fully captured in the zettel
+
+### When the user asks a question
+
+1. Search relevant notes using the structure
+2. Synthesize an answer from what you find
+3. Note any gaps - things worth capturing that aren't here yet
+
+## Note Format
+
+### Atomic Notes (10_Zettelkasten/)
+
+```markdown
+# Title
+
+## The Idea
+
+(One atomic concept. Keep it focused on a single point.)
+
+## Context
+
+(Where/how this was learned - conversation, source, experience.)
+
+## Links
+
+- Related: [[related-concept]]
+- Source: [[source-note]]
+```
+
+## Best Practices
+
+- **One idea per note**: If you're writing "and also...", that's a second note
+- **Context is essential**: Every insight needs "where did this come from?"
+- **Link liberally**: Links form the knowledge graph
+- **Keep notes concise**: Say it once, clearly
+
+## Naming
+
+- Use simple, descriptive titles: `Humanity as Algorithmic.md`
+- Spaces are fine in filenames
+- Put timestamps/IDs in frontmatter if needed, not filenames
+
+## Linking
+
+- Use `[[Note Title]]` for wikilinks
+- Create links liberally - they form the knowledge graph
+- Link to notes that don't exist yet (placeholders are fine)
+
+## Commit Protocol
+
+When making significant changes, commit to git with a clear message. The commit history tracks the evolution of this knowledge base.
+EOF
+
+echo "  ✓ Created CLAUDE.md"
+
+# Initialize git if not already a repo
+if [ ! -d "$TARGET_DIR/.git" ]; then
+  (cd "$TARGET_DIR" && git init -q)
+  echo "  ✓ Initialized git repository"
+fi
+
+# Add .gitkeep files to empty directories
+touch "$TARGET_DIR/00_Inbox/.gitkeep"
+touch "$TARGET_DIR/10_Zettelkasten/.gitkeep"
+touch "$TARGET_DIR/99_Archive/.gitkeep"
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Done! Your zettelkasten is ready."
+echo ""
+echo "Next steps:"
+echo "  1. Set ZETTEL_ROOT to point to this directory:"
+echo "     export ZETTEL_ROOT=\"$TARGET_DIR\""
+echo ""
+echo "  2. Run 'zettel welcome' to verify"
+echo ""
+echo "  3. Start adding notes!"
+echo ""
